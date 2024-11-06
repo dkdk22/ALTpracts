@@ -74,22 +74,117 @@ def levenshtein(x, y, threshold):
 def levenshtein_cota_optimista(x, y, threshold):
     return 0 # COMPLETAR Y REEMPLAZAR ESTA PARTE
 
+
 def damerau_restricted_matriz(x, y, threshold=None):
-    # completar versión Damerau-Levenstein restringida con matriz
     lenX, lenY = len(x), len(y)
-    # COMPLETAR
-    return 0 # COMPLETAR Y REEMPLAZAR ESTA PARTE
+    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
+    
+    # Inicialización de la matriz
+    for i in range(1, lenX + 1):
+        D[i][0] = i
+    for j in range(1, lenY + 1):
+        D[0][j] = j
+
+    # Llenado de la matriz con operaciones de edición y transposición adyacente
+    for i in range(1, lenX + 1):
+        for j in range(1, lenY + 1):
+            cost = 0 if x[i - 1] == y[j - 1] else 1
+            D[i][j] = min(
+                D[i - 1][j] + 1,             # Borrado
+                D[i][j - 1] + 1,             # Inserción
+                D[i - 1][j - 1] + cost       # Sustitución
+            )
+            
+            # Transposición si hay dos caracteres adyacentes intercambiables
+            if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
+                D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
+
+    return D[lenX, lenY]
+
 
 def damerau_restricted_edicion(x, y, threshold=None):
-    # partiendo de damerau_restricted_matriz añadir recuperar
-    # secuencia de operaciones de edición
-    return 0,[] # COMPLETAR Y REEMPLAZAR ESTA PARTE
+    lenX, lenY = len(x), len(y)
+    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
+    
+    # Inicialización de la matriz
+    for i in range(1, lenX + 1):
+        D[i][0] = i
+    for j in range(1, lenY + 1):
+        D[0][j] = j
+
+    # Llenado de la matriz con transposición
+    for i in range(1, lenX + 1):
+        for j in range(1, lenY + 1):
+            cost = 0 if x[i - 1] == y[j - 1] else 1
+            D[i][j] = min(
+                D[i - 1][j] + 1,             # Borrado
+                D[i][j - 1] + 1,             # Inserción
+                D[i - 1][j - 1] + cost       # Sustitución
+            )
+            if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
+                D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
+
+    # Recuperación de la secuencia de edición
+    i, j = lenX, lenY
+    ediciones = []
+    while i > 0 or j > 0:
+        if i > 0 and D[i][j] == D[i - 1][j] + 1:
+            ediciones.append((x[i - 1], ''))  # Borrado
+            i -= 1
+        elif j > 0 and D[i][j] == D[i][j - 1] + 1:
+            ediciones.append(('', y[j - 1]))  # Inserción
+            j -= 1
+        elif i > 0 and j > 0 and D[i][j] == D[i - 1][j - 1] + (x[i - 1] != y[j - 1]):
+            ediciones.append((x[i - 1], y[j - 1]))  # Sustitución
+            i -= 1
+            j -= 1
+        elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
+            ediciones.append((x[i - 2] + x[i - 1], y[j - 2] + y[j - 1]))  # Transposición
+            i -= 2
+            j -= 2
+
+    ediciones.reverse()
+    return D[lenX, lenY], ediciones
 
 def damerau_restricted(x, y, threshold=None):
-    # versión con reducción coste espacial y parada por threshold
-     return min(0,threshold+1) # COMPLETAR Y REEMPLAZAR ESTA PARTE
+    lenX, lenY = len(x), len(y)
+    if threshold is not None and abs(lenX - lenY) > threshold:
+        return threshold + 1
 
-import numpy as np
+    # Inicialización de los vectores de distancia
+    prev_row = np.arange(lenY + 1)
+    curr_row = np.zeros(lenY + 1, dtype=int)
+    prev_prev_row = np.zeros(lenY + 1, dtype=int)
+
+    for i in range(1, lenX + 1):
+        curr_row[0] = i
+        min_cost_in_row = curr_row[0]
+
+        for j in range(1, lenY + 1):
+            cost = 0 if x[i - 1] == y[j - 1] else 1
+            curr_row[j] = min(
+                prev_row[j] + 1,           # Borrado
+                curr_row[j - 1] + 1,       # Inserción
+                prev_row[j - 1] + cost     # Sustitución
+            )
+
+            # Transposición
+            if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
+                curr_row[j] = min(curr_row[j], prev_prev_row[j - 2] + 1)
+
+            min_cost_in_row = min(min_cost_in_row, curr_row[j])
+
+        # Intercambio de referencias de vectores
+        prev_prev_row, prev_row, curr_row = prev_row, curr_row, prev_prev_row
+
+        # Parada por threshold si el mínimo de la fila supera el umbral
+        if threshold is not None and min_cost_in_row > threshold:
+            return threshold + 1
+
+    return prev_row[lenY]
+
+
+
 
 def damerau_intermediate_matriz(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
