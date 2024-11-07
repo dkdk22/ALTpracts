@@ -61,6 +61,8 @@ class SAR_Indexer:
         self.show_snippet = False # valor por defecto, se cambia con self.set_snippet()
         self.use_stemming = False # valor por defecto, se cambia con self.set_stemming()
         # ALT - COMPLETAR
+	self.use_spelling = False   # Control per a la correcció ortogràfica
+        self.speller = None         # Corrector ortogràfic
 
     ###############################
     ###                         ###
