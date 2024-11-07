@@ -68,11 +68,47 @@ def levenshtein_reduccion(x, y, threshold=None):
     return vAct[lenX]
 
 def levenshtein(x, y, threshold):
-    # completar versión reducción coste espacial y parada por threshold
-    return min(0,threshold+1) # COMPLETAR Y REEMPLAZAR ESTA PARTE
+    # En aquesta funció calculem la distància de Levenshtein
+    # utilitzant una tècnica de reducció d'espai amb vectors
+    lenX, lenY = len(x), len(y)
+    vAnt = [0] * (lenX + 1)  # Vector per a la fila anterior
+    vAct = [0] * (lenX + 1)   # Vector per a la fila actual
+
+    for i in range(1, lenX + 1):
+        vAnt[i] = i  # Inicialitzem el vector anterior
+
+    for j in range(1, lenY + 1):
+        vAct[0] = j  # Inicialitzem la primera posició
+        for i in range(1, lenX + 1):
+            vAct[i] = min(
+                vAct[i - 1] + 1,      # Cost d'eliminació
+                vAnt[i] + 1,          # Cost d'inserció
+                vAnt[i - 1] + (x[i - 1] != y[j - 1]),  # Cost de substitució
+            )
+        if vAct[lenX] > threshold:  # Comprovem si supera el llindar
+            return threshold + 1
+        vAnt = vAct[:]  # Actualitzem el vector anterior
+
+    return vAct[lenX]  # Retornem la distància final
 
 def levenshtein_cota_optimista(x, y, threshold):
-    return 0 # COMPLETAR Y REEMPLAZAR ESTA PARTE
+    # Aquesta funció calcula una cota optimista
+    # basada en el recompte de caràcters de les dues cadenes
+    count_x = {}
+    count_y = {}
+
+    for char in x:
+        count_x[char] = count_x.get(char, 0) + 1  # Comptem els caràcters de x
+    for char in y:
+        count_y[char] = count_y.get(char, 0) + 1  # Comptem els caràcters de y
+
+    # Calculem la suma de les diferències en els comptatges
+    total_diff = sum(abs(count_x.get(char, 0) - count_y.get(char, 0)) for char in set(count_x.keys()).union(set(count_y.keys())))
+
+    if total_diff > threshold:
+        return threshold + 1  # Retornem el llindar + 1 si es supera
+
+    return levenshtein(x, y, threshold)  # Cridem a la funció de Levenshtein real
 
 
 def damerau_restricted_matriz(x, y, threshold=None):
