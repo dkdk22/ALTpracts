@@ -286,8 +286,20 @@ class SAR_Indexer:
                 "threshold" entero, umbral del corrector
         """
         
-        # ALT - COMPLETAR        
-        pass
+	self.use_spelling = use_spelling
+    	if use_spelling:
+        
+        vocab = list(self.index.keys())
+        self.speller = SpellSuggester(
+            dist_functions={
+                'levenstein': self.levenshtein,  
+                'damerau_r': self.damerau_restricted,
+                'damerau_i': self.damerau_intermediate
+            },
+            vocab=vocab,
+            default_distance=distance,
+            default_threshold=threshold
+        )       
 
     def tokenize(self, text:str):
         """
