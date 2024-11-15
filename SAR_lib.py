@@ -452,7 +452,23 @@ class SAR_Indexer:
         # ALT - MODIFICAR
         term = term.lower()
         r1 = self.index[field].get(term, [])
-        return r1
+	    
+           # Si el terme no es troba i la correcció ortogràfica està activada, utilitzem el corrector
+    	if not r1 and self.use_spelling and self.speller:
+        suggestions = self.speller.suggest(term)
+
+        # Inicialitzem una llista per emmagatzemar els resultats de totes les suggerències
+        all_results = []
+        for suggestion in suggestions:
+            r1 = self.index[field].get(suggestion, [])
+            if r1:
+                all_results.extend(r1)  
+
+        # Si trobem resultats amb alguna suggerència, els retornem
+        if all_results:
+            return list(set(all_results)) 
+
+    return r1  
 
 
     def reverse_posting(self, p:list):
