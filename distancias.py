@@ -71,6 +71,10 @@ def levenshtein(x, y, threshold):
     # En aquesta funció calculem la distància de Levenshtein
     # utilitzant una tècnica de reducció d'espai amb vectors
     lenX, lenY = len(x), len(y)
+    
+    if abs(lenX - lenY) > threshold:
+        return threshold + 1
+        
     vAnt = [0] * (lenX + 1)  # Vector per a la fila anterior
     vAct = [0] * (lenX + 1)   # Vector per a la fila actual
 
