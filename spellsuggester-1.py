@@ -79,8 +79,8 @@ class SpellSuggester:
 
         suggestions = []
         for word in self.vocabulary:
-            # Usamos la nueva función de Levenshtein optimizada con umbral
-            dist = self.distance_functions['levenshtein_o'](term, word, threshold)  # Llamada optimizada
+            # Asegurarse de pasar el argumento threshold
+            dist = dist_function(term, word, threshold)  # Pasamos threshold
             if dist <= threshold:
                 suggestions.append(word)
 
