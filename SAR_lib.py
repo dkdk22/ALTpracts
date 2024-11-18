@@ -3,6 +3,7 @@ from nltk.stem.snowball import SnowballStemmer
 import os
 import re
 import sys
+from spellsuggester import SpellSuggester
 import math
 from pathlib import Path
 from typing import Optional, List, Union, Dict
@@ -61,8 +62,10 @@ class SAR_Indexer:
         self.show_snippet = False # valor por defecto, se cambia con self.set_snippet()
         self.use_stemming = False # valor por defecto, se cambia con self.set_stemming()
         # ALT - COMPLETAR
-	self.use_spelling = False   # Control per a la correcció ortogràfica
-        self.speller = None         # Corrector ortogràfic
+        self.use_spelling = False # valor por defecto, se cambia con self.set_spelling()
+        self.distance = None # valor por defecto, se cambia con self.set_spelling()
+        self.threshold = None # valor por defecto, se cambia con self.set_spelling()
+        self.speller = SpellSuggester()
 
     ###############################
     ###                         ###
@@ -286,20 +289,20 @@ class SAR_Indexer:
                 "threshold" entero, umbral del corrector
         """
         
-	self.use_spelling = use_spelling
-    	if use_spelling:
-        
-        vocab = list(self.index.keys())
-        self.speller = SpellSuggester(
-            dist_functions={
-                'levenstein': self.levenshtein,  
-                'damerau_r': self.damerau_restricted,
-                'damerau_i': self.damerau_intermediate
-            },
-            vocab=vocab,
-            default_distance=distance,
-            default_threshold=threshold
-        )       
+        self.use_spelling = use_spelling
+        if use_spelling:
+            # El vocabulari són les claus de self.index
+            vocab = list(self.index.keys())
+            self.speller = SpellSuggester(
+                dist_functions={
+                    'levenstein': self.levenshtein,  # Assegura't que aquestes funcions existeixen
+                    'damerau_r': self.damerau_restricted,
+                    'damerau_i': self.damerau_intermediate
+                },
+                vocab=vocab,
+                default_distance=distance,
+                default_threshold=threshold
+            )
 
     def tokenize(self, text:str):
         """
@@ -452,23 +455,25 @@ class SAR_Indexer:
         # ALT - MODIFICAR
         term = term.lower()
         r1 = self.index[field].get(term, [])
-	    
-           # Si el terme no es troba i la correcció ortogràfica està activada, utilitzem el corrector
-    	if not r1 and self.use_spelling and self.speller:
-        suggestions = self.speller.suggest(term)
 
-        # Inicialitzem una llista per emmagatzemar els resultats de totes les suggerències
-        all_results = []
-        for suggestion in suggestions:
-            r1 = self.index[field].get(suggestion, [])
-            if r1:
-                all_results.extend(r1)  
+        # Si el terme no es troba i la correcció ortogràfica està activada, utilitzem el corrector
+        if not r1 and self.use_spelling and self.speller:
+            suggestions = self.speller.suggest(term)  # Obtenim suggeriments de la paraula
 
-        # Si trobem resultats amb alguna suggerència, els retornem
-        if all_results:
-            return list(set(all_results)) 
+            # Inicialitzem una llista per emmagatzemar els resultats de totes les suggerències
+            all_results = []
+            for suggestion in suggestions:
+                r1 = self.index[field].get(suggestion, [])
+                if r1:
+                    all_results.extend(r1)  # Afegim els resultats trobats
 
-    return r1  
+            # Si trobem resultats amb alguna suggerència, els retornem
+            if all_results:
+                return list(set(all_results))  # Eliminem duplicats
+
+        return r1  # Si el terme original es troba o no hi ha correcció ortogràfica, retornem el resultat original
+
+  
 
 
     def reverse_posting(self, p:list):
