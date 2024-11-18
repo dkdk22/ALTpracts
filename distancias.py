@@ -68,32 +68,46 @@ def levenshtein_reduccion(x, y, threshold=None):
     return vAct[lenX]
 
 def levenshtein(x, y, threshold):
-    # En aquesta funció calculem la distància de Levenshtein
-    # utilitzant una tècnica de reducció d'espai amb vectors
-    lenX, lenY = len(x), len(y)
+# Calculem la distància de Levenshtein utilitzant vectors en comptes de matrius per optimitzar l'espai
     
-    if abs(lenX - lenY) > threshold:
-        return threshold + 1
-        
-    vAnt = [0] * (lenX + 1)  # Vector per a la fila anterior
-    vAct = [0] * (lenX + 1)   # Vector per a la fila actual
+    lenX, lenY = len(x), len(y)
+    vAnt = [0] * (lenX + 1)  # Vector anterior
+    vAct = [0] * (lenX + 1)  # Vector actual
 
+    # Inicialitzem la primera columna
     for i in range(1, lenX + 1):
-        vAnt[i] = i  # Inicialitzem el vector anterior
+        vAnt[i] = vAnt[i - 1] + 1
 
+    # Recorrem cada fila
     for j in range(1, lenY + 1):
-        vAct[0] = j  # Inicialitzem la primera posició
-        for i in range(1, lenX + 1):
-            vAct[i] = min(
-                vAct[i - 1] + 1,      # Cost d'eliminació
-                vAnt[i] + 1,          # Cost d'inserció
-                vAnt[i - 1] + (x[i - 1] != y[j - 1]),  # Cost de substitució
-            )
-        if vAct[lenX] > threshold:  # Comprovem si supera el llindar
-            return threshold + 1
-        vAnt = vAct[:]  # Actualitzem el vector anterior
+        vAct[0] = vAnt[0] + 1  # Inicialitzem la primera cel·la
 
-    return vAct[lenX]  # Retornem la distància final
+        paradaPorThreshold = True  # Comprovem si hem de parar pel llindar
+        if(vAct[0] <= threshold): 
+            paradaPorThreshold = False
+        elif(vAct[0] == threshold and lenX - i == lenY - j): 
+            paradaPorThreshold = False
+
+        # Recorrem cada columna
+        for i in range(1, lenX + 1):
+            vAct[i] = min(vAct[i - 1] + 1,  # Inserció
+                          vAnt[i] + 1,      # Eliminació
+                          vAnt[i - 1] + (x[i - 1] != y[j - 1]))  # Substitució
+
+            # Si la distància és menor que el llindar, continuem
+            if(vAct[i] < threshold): 
+                paradaPorThreshold = False
+            elif(vAct[i] == threshold and lenX - i == lenY - j): 
+                paradaPorThreshold = False
+
+        # Si s'ha superat el llindar, parem i tornem el llindar + 1
+        if(paradaPorThreshold): 
+            return threshold + 1
+        
+        # Actualitzem els vectors per la següent iteració
+        vAct, vAnt = vAnt, vAct
+    
+    return vAnt[lenX]  # Retornem la distància final
 
 def levenshtein_cota_optimista(x, y, threshold):
     # Aquesta funció calcula una cota optimista
