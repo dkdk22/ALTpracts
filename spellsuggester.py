@@ -60,6 +60,9 @@ class SpellSuggester:
 
     def suggest(self, term, distance=None, threshold=None, flatten=True):
         """
+        
+         Cerca suggeriments per al terme introduït utilitzant les funcions de distància,
+         agrupant-los per distància i aplanant-los si cal.
 
         Args:
             term (str): término de búsqueda.
@@ -67,25 +70,32 @@ class SpellSuggester:
             threshold (int): threshold para limitar la búsqueda
         """
         if distance is None:
-            distance = self.default_distance
+            distance = self.default_distance  # Si no es proporciona una distància, utilitzem la predeterminada.
         if threshold is None:
-            threshold = self.default_threshold
+            threshold = self.default_threshold  # Si no es proporciona un llindar, utilitzem el predeterminat.
 
-        ########################################
-        # COMPLETAR
-        ########################################
-        
-        dist_function = self.distance_functions.get(distance)
+        dist_function = self.distance_functions.get(distance)  # Recuperem la funció de distància.
+        suggestions = []  # Llista per emmagatzemar els suggeriments agrupats.
+        grouped_suggestions = []  # Llista per emmagatzemar les paraules agrupades per distància.
 
-        suggestions = []
+        # Generem les suggerències, agrupades per distància
         for word in self.vocabulary:
-            # Asegurarse de pasar el argumento threshold
-            dist = dist_function(term, word, threshold)  # Pasamos threshold
-            if dist <= threshold:
-                suggestions.append(word)
+            dist = dist_function(term, word, threshold)  # Calculant la distància entre el terme i la paraula.
 
+            # Si la distància és menor o igual al llindar
+            if dist <= threshold:
+                # Ens assegurem que la llista de la distància existeixi
+                while len(grouped_suggestions) <= dist:
+                    grouped_suggestions.append([])
+
+                # Afegim la paraula a la llista corresponent a aquesta distància
+                grouped_suggestions[dist].append(word)
+
+        # Si flatten és True, aplanem les llistes per obtenir una llista de paraules plana
         if flatten:
-            suggestions = [item for sublist in suggestions for item in sublist]
+            suggestions = [item for sublist in grouped_suggestions for item in sublist]
+        else:
+            suggestions = grouped_suggestions  # Retornem les llistes agrupades per distància.
 
         return suggestions
 
