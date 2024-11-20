@@ -249,145 +249,147 @@ def damerau_restricted(x, y, threshold=None):
 
 
 
-
-def damerau_intermediate_matriz(x, y, threshold=None):
+def damerau_intermediate(x, y, threshold=None):
+    import numpy as np
     lenX, lenY = len(x), len(y)
-    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
+    if threshold is not None and abs(lenX - lenY) > threshold:
+        return threshold + 1
 
-    for i in range(lenX + 1):
-        D[i][0] = i
-    for j in range(lenY + 1):
-        D[0][j] = j
+    # Initialize a list to hold the last three rows
+    rows = [np.arange(lenY + 1), np.zeros(lenY + 1, dtype=int), np.zeros(lenY + 1, dtype=int), np.zeros(lenY + 1, dtype=int)]
 
     for i in range(1, lenX + 1):
+        curr_row = rows[i % 4]
+        prev_row = rows[(i - 1) % 4]
+        prev_prev_row = rows[(i - 2) % 4]
+        prev_prev_prev_row = rows[(i - 3) % 4]
+
+        curr_row[0] = i
+        min_cost_in_row = curr_row[0]
+
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
-            D[i][j] = min(
-                D[i - 1][j] + 1,        #Borrado
-                D[i][j - 1] + 1,        #Inserción
-                D[i - 1][j - 1] + cost  #Sustitución
+            curr_row[j] = min(
+                prev_row[j] + 1,           # Deletion
+                curr_row[j - 1] + 1,       # Insertion
+                prev_row[j - 1] + cost     # Substitution
             )
 
-            #Transposición ab ↔ ba
+            # Transpositions with adjusted conditions
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
-                D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
-            
-            #Transposición ab ↔ bca
-            if i > 2 and j > 1 and x[i - 3:i] == y[j - 1] + x[i - 3:i-1]:
-                D[i][j] = min(D[i][j], D[i - 3][j - 1] + 2)
+                curr_row[j] = min(curr_row[j], prev_prev_row[j - 2] + 1)
 
-            #Transposición acb ↔ ba
-            if i > 1 and j > 2 and x[i - 1] + x[i - 3:i-1] == y[j - 3:j-1] + y[j - 1]:
-                D[i][j] = min(D[i][j], D[i - 2][j - 3] + 2)
+            if i > 2 and j > 2 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+                curr_row[j] = min(curr_row[j], prev_prev_prev_row[j - 2] + 2)
 
-    return D[lenX][lenY]
+            if i > 2 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
+                curr_row[j] = min(curr_row[j], prev_prev_row[j - 3] + 2)
 
+            min_cost_in_row = min(min_cost_in_row, curr_row[j])
+
+        # Threshold check
+        if threshold is not None and min_cost_in_row > threshold:
+            return threshold + 1
+
+    return curr_row[lenY]
 
 
 def damerau_intermediate_edicion(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
     D = np.zeros((lenX + 1, lenY + 1), dtype=int)
 
-    for i in range(lenX + 1):
+    # Inicialización de la matriz
+    for i in range(1, lenX + 1):
         D[i][0] = i
-    for j in range(lenY + 1):
+    for j in range(1, lenY + 1):
         D[0][j] = j
 
+    # Llenado de la matriz
     for i in range(1, lenX + 1):
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
             D[i][j] = min(
-                D[i - 1][j] + 1,        # Borrado
-                D[i][j - 1] + 1,        # Inserción
-                D[i - 1][j - 1] + cost  # Sustitución
+                D[i - 1][j] + 1,             # Borrado
+                D[i][j - 1] + 1,             # Inserción
+                D[i - 1][j - 1] + cost       # Sustitución
             )
 
             # Transposición ab ↔ ba
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
 
-            # Transposición ab ↔ bca
-            if i > 2 and j > 1 and x[i - 3:i] == y[j - 1] + x[i - 3:i-1]:
-                D[i][j] = min(D[i][j], D[i - 3][j - 1] + 2)
-
             # Transposición acb ↔ ba
-            if i > 1 and j > 2 and x[i - 1] + x[i - 3:i-1] == y[j - 3:j-1] + y[j - 1]:
+            if i > 2 and j > 1 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+                D[i][j] = min(D[i][j], D[i - 3][j - 2] + 2)
+
+            # Transposición ab ↔ bca
+            if i > 1 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 3] + 2)
 
-    # Recuperar secuencia de operaciones
-    seqOps = []
+    # Recuperación del camino
     i, j = lenX, lenY
+    ediciones = []
     while i > 0 or j > 0:
-        if i > 2 and j > 1 and D[i][j] == D[i - 3][j - 1] + 2 and x[i - 3:i] == y[j - 1] + x[i - 3:i-1]:
-            seqOps.append(( x[i - 3:i], y[j - 1] + x[i - 3:i-1]))
-            i -= 3
-            j -= 1
-        elif i > 1 and j > 2 and D[i][j] == D[i - 2][j - 3] + 2 and x[i - 1] + x[i - 3:i-1] == y[j - 3:j-1] + y[j - 1]:
-            seqOps.append(( x[i - 3:i], y[j - 3:j]))
-            i -= 2
-            j -= 3
-        elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
-            seqOps.append(( x[i - 2:i], y[j - 2:j]))
-            i -= 2
-            j -= 2
-        elif i > 0 and j > 0 and x[i - 1] == y[j - 1]:
-            seqOps.append(( x[i - 1], y[j - 1]))
-            i -= 1
-            j -= 1
-        elif i > 0 and j > 0 and D[i][j] == D[i - 1][j - 1] + 1:
-            seqOps.append(( x[i - 1], y[j - 1]))
-            i -= 1
-            j -= 1
-        elif i > 0 and D[i][j] == D[i - 1][j] + 1:
-            seqOps.append(( x[i - 1], ''))
+        if i > 0 and D[i][j] == D[i - 1][j] + 1:
+            ediciones.append((x[i - 1], ''))  # Borrado
             i -= 1
         elif j > 0 and D[i][j] == D[i][j - 1] + 1:
-            seqOps.append(( '', y[j - 1]))
+            ediciones.append(('', y[j - 1]))  # Inserción
             j -= 1
+        elif i > 0 and j > 0 and D[i][j] == D[i - 1][j - 1] + (x[i - 1] != y[j - 1]):
+            ediciones.append((x[i - 1], y[j - 1]))  # Sustitución
+            i -= 1
+            j -= 1
+        elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
+            ediciones.append((x[i - 2] + x[i - 1], y[j - 2] + y[j - 1]))  # Transposición ab ↔ ba
+            i -= 2
+            j -= 2
+        elif i > 2 and j > 2 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3] and D[i][j] == D[i - 3][j - 2] + 2:
+            ediciones.append((x[i - 3:i], y[j - 2:j]))  # Transposición acb ↔ ba
+            i -= 3
+            j -= 2
+        elif i > 2 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3] and D[i][j] == D[i - 2][j - 3] + 2:
+            ediciones.append((x[i - 2:i], y[j - 3:j]))  # Transposición ab ↔ bca
+            i -= 2
+            j -= 3
 
-    return D[lenX][lenY], seqOps[::-1]
+    ediciones.reverse()
+    return D[lenX, lenY], ediciones
 
 
-
-
-   
-
-
-def damerau_intermediate(x, y, threshold=None):
+def damerau_intermediate_matriz(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
-    
-    vprev3 = [0] * (lenY + 1)
-    vprev2 = [0] * (lenY + 1)
-    vprev = [j for j in range(lenY + 1)]
-    vcurrent = [0] * (lenY + 1)
-    
+    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
+
+    # Inicialización de la matriz
     for i in range(1, lenX + 1):
-        vcurrent[0] = i
-        min_val = float('inf')  #Valor mínimo en la fila actual
-        
+        D[i][0] = i
+    for j in range(1, lenY + 1):
+        D[0][j] = j
+
+    # Llenado de la matriz
+    for i in range(1, lenX + 1):
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
-            vcurrent[j] = min(vprev[j] + 1, vcurrent[j - 1] + 1, vprev[j - 1] + cost)
-            min_val = min(min_val, vcurrent[j])
-            
+            D[i][j] = min(
+                D[i - 1][j] + 1,             # Borrado
+                D[i][j - 1] + 1,             # Inserción
+                D[i - 1][j - 1] + cost       # Sustitución
+            )
+
             # Transposición ab ↔ ba
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
-                vcurrent[j] = min(vcurrent[j], vprev2[j - 2] + 1)
-            
-            # Transposición ab ↔ bca
-            if i > 2 and j > 1 and x[i - 3:i] == y[j - 1] + x[i - 3:i-1]:
-                vcurrent[j] = min(vcurrent[j], vprev3[j - 1] + 2)
+                D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
 
             # Transposición acb ↔ ba
-            if i > 1 and j > 2 and x[i - 1] + x[i - 3:i-1] == y[j - 3:j-1] + y[j - 1]:
-                vcurrent[j] = min(vcurrent[j], vprev2[j - 3] + 2)
-        
-        if min_val > threshold:
-            return threshold + 1
+            if i > 2 and j > 1 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+                D[i][j] = min(D[i][j], D[i - 3][j - 2] + 2)
 
-        vprev3, vprev2, vprev, vcurrent = vprev2, vprev, vcurrent, vprev3
+            # Transposición ab ↔ bca
+            if i > 1 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
+                D[i][j] = min(D[i][j], D[i - 2][j - 3] + 2)
 
-    return vprev[lenY]
+    return D[lenX, lenY]
 
 
 opcionesSpell = {
