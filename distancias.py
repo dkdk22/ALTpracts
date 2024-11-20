@@ -287,9 +287,9 @@ def damerau_intermediate_edicion(x, y, threshold=None):
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
             D[i][j] = min(
-                D[i - 1][j] + 1,
-                D[i][j - 1] + 1,
-                D[i - 1][j - 1] + cost
+                D[i - 1][j] + 1,        # Borrado
+                D[i][j - 1] + 1,        # Inserción
+                D[i - 1][j - 1] + cost  # Sustitución
             )
 
             # Transposición ab ↔ ba
@@ -317,7 +317,7 @@ def damerau_intermediate_edicion(x, y, threshold=None):
             i -= 2
             j -= 3
         elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
-            seqOps.append( (x[i - 2:i], y[j - 2:j]))
+            seqOps.append(( x[i - 2:i], y[j - 2:j]))
             i -= 2
             j -= 2
         elif i > 0 and j > 0 and x[i - 1] == y[j - 1]:
@@ -336,6 +336,9 @@ def damerau_intermediate_edicion(x, y, threshold=None):
             j -= 1
 
     return D[lenX][lenY], seqOps[::-1]
+
+
+
 
    
 
