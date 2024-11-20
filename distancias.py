@@ -110,23 +110,33 @@ def levenshtein(x, y, threshold):
     return vAnt[lenX]  # Retornem la distància final
 
 def levenshtein_cota_optimista(x, y, threshold):
-    # Aquesta funció calcula una cota optimista
-    # basada en el recompte de caràcters de les dues cadenes
-    count_x = {}
-    count_y = {}
+    # S'afegeixen totes les lletres de les dues cadenes a un conjunt
+    dic = set(x).union(set(y))
+    
+    # Inicialitzem un diccionari per emmagatzemar les sumes de les diferències
+    res = {1: 0, -1: 0}
 
-    for char in x:
-        count_x[char] = count_x.get(char, 0) + 1  # Comptem els caràcters de x
-    for char in y:
-        count_y[char] = count_y.get(char, 0) + 1  # Comptem els caràcters de y
-
-    # Calculem la suma de les diferències en els comptatges
-    total_diff = sum(abs(count_x.get(char, 0) - count_y.get(char, 0)) for char in set(count_x.keys()).union(set(count_y.keys())))
-
-    if total_diff > threshold:
-        return threshold + 1  # Retornem el llindar + 1 si es supera
-
-    return levenshtein(x, y, threshold)  # Cridem a la funció de Levenshtein real
+    # Recorrem el conjunt de caràcters
+    for letra in dic:
+        # Calculem la diferència d'aparicions de cada lletra en ambdues cadenes
+        dif = x.count(letra) - y.count(letra)
+        
+        # Si la diferència és negativa, la sumem al comptador de caràcters faltants en y
+        if dif < 0:
+            res[1] += abs(dif)
+        # Si la diferència és positiva, la sumem al comptador de caràcters faltants en x
+        else:
+            res[-1] += abs(dif)
+    
+    # Comprovem si el resultat final és més gran o igual que el llindar donat
+    res = max(res[1], res[-1])
+    
+    if res > threshold:
+        # Si la diferència és major que el llindar, retornem threshold + 1
+        return threshold + 1
+    else:
+        # En cas contrari, calculem la distància de Levenshtein
+        return levenshtein(x, y, threshold)
 
 
 def damerau_restricted_matriz(x, y, threshold=None):
