@@ -4,7 +4,7 @@ def levenshtein_matriz(x, y, threshold=None):
     # esta versión no utiliza threshold, se pone porque se puede
     # invocar con él, en cuyo caso se ignora
     lenX, lenY = len(x), len(y)
-    D = np.zeros((lenX + 1, lenY + 1), dtype=np.int)
+    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
     for i in range(1, lenX + 1):
         D[i][0] = D[i - 1][0] + 1
     for j in range(1, lenY + 1):
@@ -20,7 +20,7 @@ def levenshtein_matriz(x, y, threshold=None):
 def levenshtein_edicion(x, y, threshold=None):
     # a partir de la versión levenshtein_matriz
     lenX, lenY = len(x), len(y)
-    D = np.zeros((lenX + 1, lenY + 1), dtype=np.int)
+    D = np.zeros((lenX + 1, lenY + 1), dtype=int)
     for i in range(1, lenX + 1):
         D[i][0] = D[i - 1][0] + 1
     for j in range(1, lenY + 1):
@@ -35,16 +35,16 @@ def levenshtein_edicion(x, y, threshold=None):
     i, j = lenX, lenY;
     while i > 0 or j > 0: #en aquest bucle recorreguem la matriu fixant-nos sempre en la diagonal que dona el resultat, per a cada element d'aquesta veiem el contingut de les cel.les adjacents i així determinem l'operació
         if i > 0 and j > 0 and x[i - 1] == y[j - 1]:
-            seqOps.append(('match', x[i - 1], y[j - 1]))
+            seqOps.append((x[i - 1], y[j - 1]))
             i, j = i - 1, j - 1
         elif i > 0 and j > 0 and D[i][j] == D[i - 1][j - 1] + 1:
-            seqOps.append(('substitute', x[i - 1], y[j - 1]))
+            seqOps.append(( x[i - 1], y[j - 1]))
             i, j = i - 1, j - 1
         elif i > 0 and D[i][j] == D[i - 1][j] + 1:
-            seqOps.append(('delete', x[i - 1], ''))
+            seqOps.append(( x[i - 1], ''))
             i -= 1
         elif j > 0 and D[i][j] == D[i][j - 1] + 1:
-            seqOps.append(('insert', '', y[j - 1]))
+            seqOps.append(( '', y[j - 1]))
             j -= 1
     return D[lenX, lenY], seqOps[::-1] #tornem tant la distància com la seqüència, aquesta última invertida per a que estiga en l'ordre correcte
 
@@ -273,6 +273,7 @@ def damerau_intermediate_matriz(x, y, threshold=None):
     return D[lenX][lenY]
 
 
+
 def damerau_intermediate_edicion(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
     D = np.zeros((lenX + 1, lenY + 1), dtype=int)
@@ -308,35 +309,37 @@ def damerau_intermediate_edicion(x, y, threshold=None):
     i, j = lenX, lenY
     while i > 0 or j > 0:
         if i > 2 and j > 1 and D[i][j] == D[i - 3][j - 1] + 2 and x[i - 3:i] == y[j - 1] + x[i - 3:i-1]:
-            seqOps.append(('transpose3', x[i - 3:i], y[j - 1] + x[i - 3:i-1]))
+            seqOps.append(( x[i - 3:i], y[j - 1] + x[i - 3:i-1]))
             i -= 3
             j -= 1
         elif i > 1 and j > 2 and D[i][j] == D[i - 2][j - 3] + 2 and x[i - 1] + x[i - 3:i-1] == y[j - 3:j-1] + y[j - 1]:
-            seqOps.append(('transpose3', x[i - 3:i], y[j - 3:j]))
+            seqOps.append(( x[i - 3:i], y[j - 3:j]))
             i -= 2
             j -= 3
         elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
-            seqOps.append(('transpose', x[i - 2:i], y[j - 2:j]))
+            seqOps.append( (x[i - 2:i], y[j - 2:j]))
             i -= 2
             j -= 2
         elif i > 0 and j > 0 and x[i - 1] == y[j - 1]:
-            seqOps.append(('match', x[i - 1], y[j - 1]))
+            seqOps.append(( x[i - 1], y[j - 1]))
             i -= 1
             j -= 1
         elif i > 0 and j > 0 and D[i][j] == D[i - 1][j - 1] + 1:
-            seqOps.append(('substitute', x[i - 1], y[j - 1]))
+            seqOps.append(( x[i - 1], y[j - 1]))
             i -= 1
             j -= 1
         elif i > 0 and D[i][j] == D[i - 1][j] + 1:
-            seqOps.append(('delete', x[i - 1], ''))
+            seqOps.append(( x[i - 1], ''))
             i -= 1
         elif j > 0 and D[i][j] == D[i][j - 1] + 1:
-            seqOps.append(('insert', '', y[j - 1]))
+            seqOps.append(( '', y[j - 1]))
             j -= 1
 
     return D[lenX][lenY], seqOps[::-1]
 
-    
+   
+
+
 def damerau_intermediate(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
     
