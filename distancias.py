@@ -250,61 +250,66 @@ def damerau_restricted(x, y, threshold=None):
 
 
 def damerau_intermediate(x, y, threshold=None):
-    import numpy as np
     lenX, lenY = len(x), len(y)
+    
+    # Si la diferencia de longitudes supera el umbral, no hay necesidad de calcular
     if threshold is not None and abs(lenX - lenY) > threshold:
         return threshold + 1
 
-    # Initialize a list to hold the last three rows
-    rows = [np.arange(lenY + 1), np.zeros(lenY + 1, dtype=int), np.zeros(lenY + 1, dtype=int), np.zeros(lenY + 1, dtype=int)]
+    # Inicialización de los vectores de distancia
+    prev_row = np.arange(lenY + 1)
+    curr_row = np.zeros(lenY + 1, dtype=int)
+    prev_prev_row = np.zeros(lenY + 1, dtype=int)
+    prev_prev_prev_row = np.zeros(lenY + 1, dtype=int)  # Necesaria para la transposición de tres caracteres
 
     for i in range(1, lenX + 1):
-        curr_row = rows[i % 4]
-        prev_row = rows[(i - 1) % 4]
-        prev_prev_row = rows[(i - 2) % 4]
-        prev_prev_prev_row = rows[(i - 3) % 4]
-
         curr_row[0] = i
         min_cost_in_row = curr_row[0]
 
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
             curr_row[j] = min(
-                prev_row[j] + 1,           # Deletion
-                curr_row[j - 1] + 1,       # Insertion
-                prev_row[j - 1] + cost     # Substitution
+                prev_row[j] + 1,           # Borrado
+                curr_row[j - 1] + 1,       # Inserción
+                prev_row[j - 1] + cost     # Sustitución
             )
 
-            # Transpositions with adjusted conditions
+            # Transposición de dos caracteres adyacentes (coste 1)
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
                 curr_row[j] = min(curr_row[j], prev_prev_row[j - 2] + 1)
 
-            if i > 2 and j > 2 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+            # Transposición de tres caracteres: acb ↔ ba (coste 2)
+            if i > 2 and j > 1 and x[i - 3] == y[j - 1] and x[i - 1] == y[j - 2]:
                 curr_row[j] = min(curr_row[j], prev_prev_prev_row[j - 2] + 2)
 
-            if i > 2 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
+            # Transposición de tres caracteres: ab ↔ bca (coste 2)
+            if i > 1 and j > 2 and x[i - 2] == y[j - 1] and x[i - 1] == y[j - 3]:
                 curr_row[j] = min(curr_row[j], prev_prev_row[j - 3] + 2)
 
+            # Mantener el menor costo en la fila para comparación con el umbral
             min_cost_in_row = min(min_cost_in_row, curr_row[j])
 
-        # Threshold check
+        # Intercambio de referencias de vectores
+        prev_prev_prev_row, prev_prev_row, prev_row, curr_row = prev_prev_row, prev_row, curr_row, prev_prev_prev_row
+
+        # Parada temprana si el umbral se supera
         if threshold is not None and min_cost_in_row > threshold:
             return threshold + 1
 
-    return curr_row[lenY]
+    return prev_row[lenY]
 
 
 def damerau_intermediate_edicion(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
     D = np.zeros((lenX + 1, lenY + 1), dtype=int)
-
+    
     # Inicialización de la matriz
     for i in range(1, lenX + 1):
         D[i][0] = i
     for j in range(1, lenY + 1):
         D[0][j] = j
 
-    # Llenado de la matriz
+    # Llenado de la matriz con transposiciones extendidas
     for i in range(1, lenX + 1):
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
@@ -313,22 +318,23 @@ def damerau_intermediate_edicion(x, y, threshold=None):
                 D[i][j - 1] + 1,             # Inserción
                 D[i - 1][j - 1] + cost       # Sustitución
             )
-
-            # Transposición ab ↔ ba
+            
+            # Transposición de dos caracteres adyacentes
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
-
-            # Transposición acb ↔ ba
-            if i > 2 and j > 1 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+            
+            # Transposición de tres caracteres: acb ↔ ba (coste 2)
+            if i > 2 and j > 1 and x[i - 3] == y[j - 1] and x[i - 1] == y[j - 2]:
                 D[i][j] = min(D[i][j], D[i - 3][j - 2] + 2)
 
-            # Transposición ab ↔ bca
-            if i > 1 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
+            # Transposición de tres caracteres: ab ↔ bca (coste 2)
+            if i > 1 and j > 2 and x[i - 2] == y[j - 1] and x[i - 1] == y[j - 3]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 3] + 2)
 
-    # Recuperación del camino
+    # Recuperación de la secuencia de edición
     i, j = lenX, lenY
     ediciones = []
+    
     while i > 0 or j > 0:
         if i > 0 and D[i][j] == D[i - 1][j] + 1:
             ediciones.append((x[i - 1], ''))  # Borrado
@@ -340,16 +346,16 @@ def damerau_intermediate_edicion(x, y, threshold=None):
             ediciones.append((x[i - 1], y[j - 1]))  # Sustitución
             i -= 1
             j -= 1
-        elif i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1] and D[i][j] == D[i - 2][j - 2] + 1:
-            ediciones.append((x[i - 2] + x[i - 1], y[j - 2] + y[j - 1]))  # Transposición ab ↔ ba
+        elif i > 1 and j > 1 and D[i][j] == D[i - 2][j - 2] + 1:
+            ediciones.append((x[i - 2] + x[i - 1], y[j - 2] + y[j - 1]))  # Transposición adyacente
             i -= 2
             j -= 2
-        elif i > 2 and j > 2 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3] and D[i][j] == D[i - 3][j - 2] + 2:
-            ediciones.append((x[i - 3:i], y[j - 2:j]))  # Transposición acb ↔ ba
+        elif i > 2 and j > 1 and D[i][j] == D[i - 3][j - 2] + 2:
+            ediciones.append((x[i - 3] + x[i - 1], y[j - 2] + y[j - 1]))  # Transposición acb ↔ ba
             i -= 3
             j -= 2
-        elif i > 2 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3] and D[i][j] == D[i - 2][j - 3] + 2:
-            ediciones.append((x[i - 2:i], y[j - 3:j]))  # Transposición ab ↔ bca
+        elif i > 1 and j > 2 and D[i][j] == D[i - 2][j - 3] + 2:
+            ediciones.append((x[i - 2] + x[i - 1], y[j - 3] + y[j - 1]))  # Transposición ab ↔ bca
             i -= 2
             j -= 3
 
@@ -360,14 +366,14 @@ def damerau_intermediate_edicion(x, y, threshold=None):
 def damerau_intermediate_matriz(x, y, threshold=None):
     lenX, lenY = len(x), len(y)
     D = np.zeros((lenX + 1, lenY + 1), dtype=int)
-
+    
     # Inicialización de la matriz
     for i in range(1, lenX + 1):
         D[i][0] = i
     for j in range(1, lenY + 1):
         D[0][j] = j
 
-    # Llenado de la matriz
+    # Llenado de la matriz con las operaciones de edición y transposiciones extendidas
     for i in range(1, lenX + 1):
         for j in range(1, lenY + 1):
             cost = 0 if x[i - 1] == y[j - 1] else 1
@@ -376,17 +382,17 @@ def damerau_intermediate_matriz(x, y, threshold=None):
                 D[i][j - 1] + 1,             # Inserción
                 D[i - 1][j - 1] + cost       # Sustitución
             )
-
-            # Transposición ab ↔ ba
+            
+            # Transposición de dos caracteres adyacentes
             if i > 1 and j > 1 and x[i - 1] == y[j - 2] and x[i - 2] == y[j - 1]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 2] + 1)
-
-            # Transposición acb ↔ ba
-            if i > 2 and j > 1 and x[i - 1] == y[j - 2] and x[i - 3] == y[j - 1] and x[i - 2] == y[j - 3]:
+            
+            # Transposición de tres caracteres: acb ↔ ba (coste 2)
+            if i > 2 and j > 1 and x[i - 3] == y[j - 1] and x[i - 1] == y[j - 2]:
                 D[i][j] = min(D[i][j], D[i - 3][j - 2] + 2)
 
-            # Transposición ab ↔ bca
-            if i > 1 and j > 2 and x[i - 1] == y[j - 3] and x[i - 2] == y[j - 1] and y[j - 2] == x[i - 3]:
+            # Transposición de tres caracteres: ab ↔ bca (coste 2)
+            if i > 1 and j > 2 and x[i - 2] == y[j - 1] and x[i - 1] == y[j - 3]:
                 D[i][j] = min(D[i][j], D[i - 2][j - 3] + 2)
 
     return D[lenX, lenY]
